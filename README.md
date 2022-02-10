@@ -1,7 +1,46 @@
-oclif-hello-world
-=================
+# Access CLI
 
-oclif example Hello World CLI
+Access CLI
+
+## Setup
+
+- node >= 16
+- git clone https://github.com/mw10013/acli.git
+- .env file in root with
+  -- DATABASE_URL="file:./dev.db"
+- npm install
+- Build Database From Scratch
+
+## Build Database From Scratch
+
+- npx prisma db push --force-reset
+- npx prisma db seed
+
+## Browse Database
+
+- npx prisma studio
+
+## Development Setup Notes
+
+- npm install prettier -D --save-exact
+- npm install -D eslint-config-prettier
+- Extend .eslintrc with prettier
+- Add node_modules to .eslintignore
+- Add .prettierignore
+- npm add -D prisma
+- npm add @prisma/client
+- npx prisma init --datasource-provider sqlite
+- npx prisma db push
+- npx prisma generate
+- npm add -D esbuild-register
+- node --require esbuild-register prisma/seed.ts
+- npm add lodash
+- npm add -D @types/lodash
+- npm add zod
+- npm add bcrypt
+- npm add -D @types/bcrypt
+- npm install prettier -D --save-exact
+- npm add -D prettier prettier-plugin-tailwindcss
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/oclif-hello-world.svg)](https://npmjs.org/package/oclif-hello-world)
@@ -10,14 +49,18 @@ oclif example Hello World CLI
 [![License](https://img.shields.io/npm/l/oclif-hello-world.svg)](https://github.com/oclif/hello-world/blob/main/package.json)
 
 <!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
-* [Usage](#usage)
-* [Commands](#commands)
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
+
 # Usage
+
 <!-- usage -->
+
 ```sh-session
 $ npm install -g acli
 $ acli COMMAND
@@ -29,7 +72,9 @@ USAGE
   $ acli COMMAND
 ...
 ```
+
 <!-- usagestop -->
+
 ```sh-session
 $ npm install -g oclif-hello-world
 $ oex COMMAND
@@ -41,18 +86,22 @@ USAGE
   $ oex COMMAND
 ...
 ```
+
 <!-- usagestop -->
+
 # Commands
+
 <!-- commands -->
-* [`acli hello PERSON`](#acli-hello-person)
-* [`acli hello world`](#acli-hello-world)
-* [`acli help [COMMAND]`](#acli-help-command)
-* [`acli plugins`](#acli-plugins)
-* [`acli plugins:inspect PLUGIN...`](#acli-pluginsinspect-plugin)
-* [`acli plugins:install PLUGIN...`](#acli-pluginsinstall-plugin)
-* [`acli plugins:link PLUGIN`](#acli-pluginslink-plugin)
-* [`acli plugins:uninstall PLUGIN...`](#acli-pluginsuninstall-plugin)
-* [`acli plugins update`](#acli-plugins-update)
+
+- [`acli hello PERSON`](#acli-hello-person)
+- [`acli hello world`](#acli-hello-world)
+- [`acli help [COMMAND]`](#acli-help-command)
+- [`acli plugins`](#acli-plugins)
+- [`acli plugins:inspect PLUGIN...`](#acli-pluginsinspect-plugin)
+- [`acli plugins:install PLUGIN...`](#acli-pluginsinstall-plugin)
+- [`acli plugins:link PLUGIN`](#acli-pluginslink-plugin)
+- [`acli plugins:uninstall PLUGIN...`](#acli-pluginsuninstall-plugin)
+- [`acli plugins update`](#acli-plugins-update)
 
 ## `acli hello PERSON`
 
@@ -187,7 +236,7 @@ ALIASES
   $ acli plugins add
 
 EXAMPLES
-  $ acli plugins:install myplugin 
+  $ acli plugins:install myplugin
 
   $ acli plugins:install https://github.com/someuser/someplugin
 
@@ -259,16 +308,18 @@ FLAGS
 DESCRIPTION
   Update installed plugins.
 ```
+
 <!-- commandsstop -->
-* [`oex hello PERSON`](#oex-hello-person)
-* [`oex hello world`](#oex-hello-world)
-* [`oex help [COMMAND]`](#oex-help-command)
-* [`oex plugins`](#oex-plugins)
-* [`oex plugins:inspect PLUGIN...`](#oex-pluginsinspect-plugin)
-* [`oex plugins:install PLUGIN...`](#oex-pluginsinstall-plugin)
-* [`oex plugins:link PLUGIN`](#oex-pluginslink-plugin)
-* [`oex plugins:uninstall PLUGIN...`](#oex-pluginsuninstall-plugin)
-* [`oex plugins update`](#oex-plugins-update)
+
+- [`oex hello PERSON`](#oex-hello-person)
+- [`oex hello world`](#oex-hello-world)
+- [`oex help [COMMAND]`](#oex-help-command)
+- [`oex plugins`](#oex-plugins)
+- [`oex plugins:inspect PLUGIN...`](#oex-pluginsinspect-plugin)
+- [`oex plugins:install PLUGIN...`](#oex-pluginsinstall-plugin)
+- [`oex plugins:link PLUGIN`](#oex-pluginslink-plugin)
+- [`oex plugins:uninstall PLUGIN...`](#oex-pluginsuninstall-plugin)
+- [`oex plugins update`](#oex-plugins-update)
 
 ## `oex hello PERSON`
 
@@ -403,7 +454,7 @@ ALIASES
   $ oex plugins add
 
 EXAMPLES
-  $ oex plugins:install myplugin 
+  $ oex plugins:install myplugin
 
   $ oex plugins:install https://github.com/someuser/someplugin
 
@@ -475,4 +526,5 @@ FLAGS
 DESCRIPTION
   Update installed plugins.
 ```
+
 <!-- commandsstop -->
