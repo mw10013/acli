@@ -30,7 +30,7 @@ Access CLI
 - npm add -D prisma
 - npm add @prisma/client
 - npx prisma init --datasource-provider sqlite
-- npx prisma db push
+- npx prisma db push --force-reset
 - npx prisma generate
 - npm add -D esbuild-register
 - node --require esbuild-register prisma/seed.ts

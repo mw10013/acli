@@ -9,3 +9,43 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model AccessManager {
+  id                Int             @id
+  name              String          @default("")
+  accessPoints      AccessPoint[] 
+}
+
+model AccessPoint {
+  id                Int           @id
+  name              String        @default("")
+  accessUsers       AccessUser[]
+  accessManager     AccessManager @relation(fields: [accessManagerId], references: [id])
+  accessManagerId   Int 
+  position          Int
+  accessEvents      AccessEvent[]
+
+  @@unique([accessManagerId, position])    
+}
+
+model AccessUser {
+  id                Int         @id
+  name              String      @default("") 
+  code              String
+  activateCodeAt    DateTime?
+  expireCodeAt      DateTime?
+  accessPoints      AccessPoint[]
+
+  // @@unique([code, userId, deletedAt])
+}
+
+model AccessEvent {
+  id                Int         @id @default(autoincrement())
+  at                DateTime
+  access            String
+  code              String
+  // accessUser        AccessUser?  @relation(fields: [accessUserId], references: [id])
+  accessUserId      Int?
+  accessPoint       AccessPoint @relation(fields: [accessPointId], references: [id])
+  accessPointId     Int
+}

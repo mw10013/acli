@@ -12,6 +12,7 @@ oclif.manifest.json
 node_modules
 
 /prisma/dev.db
+/prisma/dev.db-journal
 .env
 .env.production
 .envrc
