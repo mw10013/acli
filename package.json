@@ -28,6 +28,7 @@
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.9.4",
     "chai": "^4",
+    "esbuild-register": "^3.3.2",
     "eslint": "^7.32.0",
     "eslint-config-oclif": "^4",
     "eslint-config-oclif-typescript": "^1.0.2",
@@ -56,6 +57,9 @@
         "description": "Say hello to the world and others"
       }
     }
+  },
+  "prisma": {
+    "seed": "node --require esbuild-register prisma/seed.ts"
   },
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
