@@ -19,7 +19,8 @@
   "dependencies": {
     "@oclif/core": "^1",
     "@oclif/plugin-help": "^5",
-    "@oclif/plugin-plugins": "^2.0.1"
+    "@oclif/plugin-plugins": "^2.0.1",
+    "@prisma/client": "^3.9.2"
   },
   "devDependencies": {
     "@oclif/test": "^2",
@@ -35,6 +36,7 @@
     "mocha": "^9",
     "oclif": "^2",
     "prettier": "2.5.1",
+    "prisma": "^3.9.2",
     "shx": "^0.3.3",
     "ts-node": "^10.2.1",
     "tslib": "^2.3.1",

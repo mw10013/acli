@@ -39,8 +39,6 @@ Access CLI
 - npm add zod
 - npm add bcrypt
 - npm add -D @types/bcrypt
-- npm install prettier -D --save-exact
-- npm add -D prettier prettier-plugin-tailwindcss
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/oclif-hello-world.svg)](https://npmjs.org/package/oclif-hello-world)
