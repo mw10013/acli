@@ -21,7 +21,8 @@
     "@oclif/plugin-help": "^5",
     "@oclif/plugin-plugins": "^2.0.1",
     "@prisma/client": "^3.9.2",
-    "node-fetch": "^2.6.6"
+    "node-fetch": "^2.6.6",
+    "zod": "^3.11.6"
   },
   "devDependencies": {
     "@oclif/test": "^2",

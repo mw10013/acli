@@ -1,6 +1,51 @@
 import { Command, Flags } from "@oclif/core";
 // const fetch = require("node-fetch");
 import fetch from "node-fetch";
+import { z } from "zod";
+
+const HeartbeatResponseData = z.object({
+  accessManager: z
+    .object({
+      id: z.number().int(),
+      accessUsers: z.array(
+        z
+          .object({
+            id: z.number().int(),
+            name: z.string(),
+            code: z.string().min(1),
+            activateCodeAt: z // JSON date
+              .string()
+              .nullable()
+              .refine(
+                (v) => !v || v.length === 0 || !Number.isNaN(Date.parse(v)),
+                {
+                  message: "Invalid date time",
+                }
+              )
+              .transform((v) => (v && v.length > 0 ? new Date(v) : null)),
+            expireCodeAt: z // JSON date
+              .string()
+              .nullable()
+              .refine(
+                (v) => !v || v.length === 0 || !Number.isNaN(Date.parse(v)),
+                {
+                  message: "Invalid date time",
+                }
+              )
+              .transform((v) => (v && v.length > 0 ? new Date(v) : null)),
+            accessPoints: z.array(
+              z.object({
+                id: z.number().int(),
+                name: z.string(),
+              })
+            ),
+          })
+          .strict()
+      ),
+    })
+    .strict(),
+});
+type HeartbeatResponseData = z.infer<typeof HeartbeatResponseData>;
 
 export default class Cmd extends Command {
   static description = "Post heartbeat to access cloud.";
@@ -17,6 +62,11 @@ export default class Cmd extends Command {
 
   static args = [];
 
+  async catch(error: Error): Promise<any> {
+    // base class seems to swallow error
+    throw error;
+  }
+
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
     const body = {
@@ -30,30 +80,19 @@ export default class Cmd extends Command {
       headers: { "Content-Type": "application/json" },
     });
     if (!response.ok) {
-      const error = {
-        status: response.status,
-        statusText: response.statusText,
-        message: await response.text(),
-      };
-      // this.error(`${error.status} ${error.statusText}: ${error.message}`);
-      this.log(`${error.status} ${error.statusText}: ${error.message}`);
-      return error;
+      // this.error seems to swallow error text.
+      throw new Error(
+        `${response.status} ${response.statusText}: ${await response.text()}`
+      );
     }
 
-    if (response.ok) {
-      const json = await response.json();
-      this.log(json);
-      return json;
+    const json = await response.json();
+    this.log(json);
+    const parseResult = HeartbeatResponseData.safeParse(json);
+    if (!parseResult.success) {
+      throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
+
+    return json;
   }
 }
-
-//   const body = { a: 1 };
-//   fetch("https://httpbin.org/post", {
-//     method: "post",
-//     body: JSON.stringify(body),
-//     headers: { "Content-Type": "application/json" },
-//   })
-//     .then((res) => res.json())
-//     .then((json) => console.log(json));
-// }
