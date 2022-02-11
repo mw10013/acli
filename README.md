@@ -34,6 +34,9 @@ Access CLI
 - npx prisma generate
 - npm add -D esbuild-register
 - node --require esbuild-register prisma/seed.ts
+- npm install node-fetch@2.6.6
+- npm add -D @types/node-fetch@2.5.12
+
 - npm add lodash
 - npm add -D @types/lodash
 - npm add zod
