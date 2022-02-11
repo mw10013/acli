@@ -14,6 +14,7 @@ export default class Cmd extends Command {
       default: "http://localhost:3000",
     }),
   };
+
   static args = [];
 
   async run(): Promise<any> {
@@ -29,9 +30,14 @@ export default class Cmd extends Command {
       headers: { "Content-Type": "application/json" },
     });
     if (!response.ok) {
-      const text = await response.text();
-      this.error(text);
-      return { error: text };
+      const error = {
+        status: response.status,
+        statusText: response.statusText,
+        message: await response.text(),
+      };
+      // this.error(`${error.status} ${error.statusText}: ${error.message}`);
+      this.log(`${error.status} ${error.statusText}: ${error.message}`);
+      return error;
     }
 
     if (response.ok) {
