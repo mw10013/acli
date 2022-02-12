@@ -48,6 +48,8 @@ const HeartbeatResponseData = z.object({
 });
 type HeartbeatResponseData = z.infer<typeof HeartbeatResponseData>;
 
+type t = HeartbeatResponseData["accessManager"]["accessUsers"][number];
+
 const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
   select: {
     id: true,
@@ -126,10 +128,36 @@ export default class Cmd extends Command {
 
     const accessUsers = await db.accessUser.findMany();
     const existing = new Set<number>(accessUsers.map((i) => i.id));
+    const { accessUserMap, add, modify } =
+      // eslint-disable-next-line unicorn/no-array-reduce
+      parseResult.data.accessManager.accessUsers.reduce(
+        ({ accessUserMap, add, modify }, v) => {
+          accessUserMap.set(v.id, v);
+          if (existing.has(v.id)) {
+            modify.add(v.id);
+          } else {
+            add.add(v.id);
+          }
+
+          return { accessUserMap, add, modify };
+        },
+        {
+          accessUserMap: new Map<
+            number,
+            typeof parseResult.data.accessManager.accessUsers[number]
+            // HeartbeatResponseData["accessManager"]["accessUsers"][number]
+          >(),
+          add: new Set<number>(),
+          modify: new Set<number>(),
+        }
+      );
     return {
       pointIds: [...pointIds],
       accessUsers,
       existing: [...existing],
+      accessUserMap: [...accessUserMap],
+      add: [...add],
+      modify: [...modify],
     };
   }
 }
