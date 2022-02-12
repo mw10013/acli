@@ -1,4 +1,5 @@
 import { Command, Flags } from "@oclif/core";
+import { Prisma, PrismaClient } from "@prisma/client";
 // const fetch = require("node-fetch");
 import fetch from "node-fetch";
 import { z } from "zod";
@@ -47,6 +48,17 @@ const HeartbeatResponseData = z.object({
 });
 type HeartbeatResponseData = z.infer<typeof HeartbeatResponseData>;
 
+const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
+  select: {
+    id: true,
+    name: true,
+    accessPoints: {
+      select: { id: true, name: true },
+    },
+  },
+});
+type AccessManager = Prisma.AccessUserGetPayload<typeof accessManagerSelect>;
+
 export default class Cmd extends Command {
   static description = "Post heartbeat to access cloud.";
   static examples = ["<%= config.bin %> <%= command.id %>"];
@@ -88,11 +100,36 @@ export default class Cmd extends Command {
 
     const json = await response.json();
     this.log(json);
+    this.log(json.accessManager.accessUsers[0]);
     const parseResult = HeartbeatResponseData.safeParse(json);
     if (!parseResult.success) {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
-    return json;
+    const db = new PrismaClient();
+    const accessManager = await db.accessManager.findUnique({
+      where: { id: parseResult.data.accessManager.id },
+      ...accessManagerSelect,
+      rejectOnNotFound: true,
+    });
+    const pointIds = new Set<number>(
+      accessManager.accessPoints.map((i) => i.id)
+    );
+    const invalidPointIds = parseResult.data.accessManager.accessUsers.flatMap(
+      (i) => i.accessPoints.map((c) => c.id).filter((i) => !pointIds.has(i))
+    );
+    if (invalidPointIds.length > 0) {
+      throw new Error(
+        `Invalid point ids in response: ${invalidPointIds.toString()}`
+      );
+    }
+
+    const accessUsers = await db.accessUser.findMany();
+    const existing = new Set<number>(accessUsers.map((i) => i.id));
+    return {
+      pointIds: [...pointIds],
+      accessUsers,
+      existing: [...existing],
+    };
   }
 }
