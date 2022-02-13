@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 // const fetch = require("node-fetch");
 import fetch from "node-fetch";
 import { z } from "zod";
@@ -35,10 +35,12 @@ const HeartbeatResponseData = z.object({
               )
               .transform((v) => (v && v.length > 0 ? new Date(v) : null)),
             accessPoints: z.array(
-              z.object({
-                id: z.number().int(),
-                name: z.string(),
-              })
+              z
+                .object({
+                  id: z.number().int(),
+                  name: z.string(),
+                })
+                .strict()
             ),
           })
           .strict()
@@ -47,8 +49,6 @@ const HeartbeatResponseData = z.object({
     .strict(),
 });
 type HeartbeatResponseData = z.infer<typeof HeartbeatResponseData>;
-
-type t = HeartbeatResponseData["accessManager"]["accessUsers"][number];
 
 const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
   select: {
@@ -108,6 +108,8 @@ export default class Cmd extends Command {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
+    return parseResult.data;
+    /*
     const db = new PrismaClient();
     const accessManager = await db.accessManager.findUnique({
       where: { id: parseResult.data.accessManager.id },
@@ -127,37 +129,30 @@ export default class Cmd extends Command {
     }
 
     const accessUsers = await db.accessUser.findMany();
-    const existing = new Set<number>(accessUsers.map((i) => i.id));
-    const { accessUserMap, add, modify } =
-      // eslint-disable-next-line unicorn/no-array-reduce
-      parseResult.data.accessManager.accessUsers.reduce(
-        ({ accessUserMap, add, modify }, v) => {
-          accessUserMap.set(v.id, v);
-          if (existing.has(v.id)) {
-            modify.add(v.id);
-          } else {
-            add.add(v.id);
-          }
+    const existingIds = new Set<number>(accessUsers.map((i) => i.id));
+    const addIds = new Set<number>();
+    const modifyIds = new Set<number>();
+    const accessUserMap = new Map<
+      number,
+      HeartbeatResponseData["accessManager"]["accessUsers"][number]
+    >();
+    for (const accessUser of parseResult.data.accessManager.accessUsers) {
+      accessUserMap.set(accessUser.id, accessUser);
+      if (existingIds.has(accessUser.id)) {
+        modifyIds.add(accessUser.id);
+      } else {
+        addIds.add(accessUser.id);
+      }
+    }
 
-          return { accessUserMap, add, modify };
-        },
-        {
-          accessUserMap: new Map<
-            number,
-            typeof parseResult.data.accessManager.accessUsers[number]
-            // HeartbeatResponseData["accessManager"]["accessUsers"][number]
-          >(),
-          add: new Set<number>(),
-          modify: new Set<number>(),
-        }
-      );
     return {
       pointIds: [...pointIds],
-      accessUsers,
-      existing: [...existing],
+      accessUsers: parseResult.data.accessManager.accessUsers,
+      existingIds: [...existingIds],
       accessUserMap: [...accessUserMap],
-      add: [...add],
-      modify: [...modify],
+      addIds: [...addIds],
+      modifyIds: [...modifyIds],
     };
+    */
   }
 }
