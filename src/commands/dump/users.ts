@@ -2,7 +2,7 @@ import { Command } from "@oclif/core";
 import { PrismaClient } from "@prisma/client";
 
 export default class Cmd extends Command {
-  static description = "Dump usersd";
+  static description = "Dump users";
   static examples = ["<%= config.bin %> <%= command.id %>"];
   static enableJsonFlag = true;
 
@@ -25,7 +25,7 @@ export default class Cmd extends Command {
       },
     });
     await db.$disconnect();
-    this.log("accessUsers: ", accessUsers);
+    this.log("Access Users: ", accessUsers);
     return { accessUsers };
   }
 }
