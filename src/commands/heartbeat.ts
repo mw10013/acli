@@ -2,7 +2,6 @@ import { Command, Flags } from "@oclif/core";
 import { Prisma, PrismaClient } from "@prisma/client";
 import fetch from "node-fetch";
 import { z } from "zod";
-// import { _ } from "lodash"
 import * as _ from "lodash";
 
 const HeartbeatResponseData = z.object({
@@ -126,14 +125,12 @@ export default class Cmd extends Command {
     }
 
     const json = await response.json();
-    this.log(json);
-    this.log(json.accessManager.accessUsers[0]);
     const parseResult = HeartbeatResponseData.safeParse(json);
     if (!parseResult.success) {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
-    const db = new PrismaClient();
+    const db = new PrismaClient({ log: ["query"] });
     const accessManager = await db.accessManager.findUnique({
       where: { id: parseResult.data.accessManager.id },
       ...accessManagerSelect,
@@ -185,6 +182,57 @@ export default class Cmd extends Command {
     const modifyIds = commonIds.filter(
       (id) => !_.isEqual(cloudAccessUserMap.get(id), localAccessUserMap.get(id))
     );
+
+    for (const id of addIds) {
+      const accessUser = cloudAccessUserMap.get(id);
+      if (accessUser) {
+        // eslint-disable-next-line no-await-in-loop
+        await db.accessUser.create({
+          data: {
+            id: accessUser.id,
+            name: accessUser.name,
+            code: accessUser.code,
+            activateCodeAt: accessUser.activateCodeAt,
+            expireCodeAt: accessUser.expireCodeAt,
+            accessPoints: {
+              connect: accessUser.accessPoints.map((v) => ({ id: v.id })),
+            },
+          },
+        });
+      }
+    }
+    /*
+    const accessUser = cloudAccessUserMap.get(1);
+    if (accessUser) {
+      const create = await db.accessUser.create({
+        data: {
+          id: accessUser.id,
+          name: accessUser.name,
+          code: accessUser.code,
+          activateCodeAt: accessUser.activateCodeAt,
+          expireCodeAt: accessUser.expireCodeAt,
+        },
+      });
+    }
+*/
+    // await db.$transaction(addIds.map(id => {
+    //   const accessUser = cloudAccessUserMap.get(id)
+
+    //   if (accessUser) {
+    //     return db.accessUser.create({
+    //       data: {
+    //         id: accessUser.id,
+    //         name: accessUser.name,
+    //         code: accessUser.code,
+    //         activateCodeAt: accessUser.activateCodeAt,
+    //         expireCodeAt: accessUser.expireCodeAt,
+    //       },
+    //     }  });
+
+    // ))
+
+    await db.$transaction;
+    await db.accessUser.create;
 
     return {
       localAccessUserMap: [...localAccessUserMap],
