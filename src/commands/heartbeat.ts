@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 // const fetch = require("node-fetch");
 import fetch from "node-fetch";
 import { z } from "zod";
@@ -108,8 +108,8 @@ export default class Cmd extends Command {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
-    return parseResult.data;
-    /*
+    // return parseResult.data;
+
     const db = new PrismaClient();
     const accessManager = await db.accessManager.findUnique({
       where: { id: parseResult.data.accessManager.id },
@@ -153,6 +153,5 @@ export default class Cmd extends Command {
       addIds: [...addIds],
       modifyIds: [...modifyIds],
     };
-    */
   }
 }
