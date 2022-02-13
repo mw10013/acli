@@ -159,12 +159,12 @@ export default class Cmd extends Command {
     }
 
     const addIds = [];
-    const modifyIds = [];
+    const existingIds = [];
     const cloudAccessUserMap: AccessUserMap = new Map();
     for (const accessUser of parseResult.data.accessManager.accessUsers) {
       cloudAccessUserMap.set(accessUser.id, accessUser);
       if (localAccessUserMap.has(accessUser.id)) {
-        modifyIds.push(accessUser.id);
+        existingIds.push(accessUser.id);
       } else {
         addIds.push(accessUser.id);
       }
@@ -177,16 +177,16 @@ export default class Cmd extends Command {
       throw new Error(`Duplicate cloud access user id's.`);
     }
 
-    const modifyIdsSet = new Set(modifyIds);
+    const existingIdsSet = new Set(existingIds);
     const removeIds = [...localAccessUserMap.keys()].filter(
-      (x) => !modifyIdsSet.has(x)
+      (x) => !existingIdsSet.has(x)
     );
 
     return {
       localAccessUserMap: [...localAccessUserMap],
       cloudAccessUserMap: [...cloudAccessUserMap],
       addIds,
-      modifyIds,
+      existingIds,
       removeIds,
     };
   }
