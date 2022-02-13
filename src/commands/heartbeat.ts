@@ -81,9 +81,9 @@ const accessUserSelect = (accessManagerId: number) => {
   });
 };
 
-type AccessUser = Prisma.AccessUserGetPayload<
-  ReturnType<typeof accessUserSelect>
->;
+// type AccessUser = Prisma.AccessUserGetPayload<
+//   ReturnType<typeof accessUserSelect>
+// >;
 
 export default class Cmd extends Command {
   static description = "Post heartbeat to access cloud.";
@@ -230,9 +230,6 @@ export default class Cmd extends Command {
     //     }  });
 
     // ))
-
-    await db.$transaction;
-    await db.accessUser.create;
 
     return {
       localAccessUserMap: [...localAccessUserMap],
