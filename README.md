@@ -37,9 +37,9 @@ Access CLI
 - npm install node-fetch@2.6.6
 - npm add -D @types/node-fetch@2.5.12
 - npm add zod
-
 - npm add lodash
 - npm add -D @types/lodash
+
 - npm add bcrypt
 - npm add -D @types/bcrypt
 

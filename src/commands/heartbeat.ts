@@ -2,6 +2,8 @@ import { Command, Flags } from "@oclif/core";
 import { Prisma, PrismaClient } from "@prisma/client";
 import fetch from "node-fetch";
 import { z } from "zod";
+// import { _ } from "lodash"
+import * as _ from "lodash";
 
 const HeartbeatResponseData = z.object({
   accessManager: z
@@ -131,8 +133,6 @@ export default class Cmd extends Command {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
-    // return parseResult.data;
-
     const db = new PrismaClient();
     const accessManager = await db.accessManager.findUnique({
       where: { id: parseResult.data.accessManager.id },
@@ -159,12 +159,12 @@ export default class Cmd extends Command {
     }
 
     const addIds = [];
-    const existingIds = [];
+    const commonIds = [];
     const cloudAccessUserMap: AccessUserMap = new Map();
     for (const accessUser of parseResult.data.accessManager.accessUsers) {
       cloudAccessUserMap.set(accessUser.id, accessUser);
       if (localAccessUserMap.has(accessUser.id)) {
-        existingIds.push(accessUser.id);
+        commonIds.push(accessUser.id);
       } else {
         addIds.push(accessUser.id);
       }
@@ -177,17 +177,22 @@ export default class Cmd extends Command {
       throw new Error(`Duplicate cloud access user id's.`);
     }
 
-    const existingIdsSet = new Set(existingIds);
+    const commonIdsSet = new Set(commonIds);
     const removeIds = [...localAccessUserMap.keys()].filter(
-      (x) => !existingIdsSet.has(x)
+      (x) => !commonIdsSet.has(x)
+    );
+
+    const modifyIds = commonIds.filter(
+      (id) => !_.isEqual(cloudAccessUserMap.get(id), localAccessUserMap.get(id))
     );
 
     return {
       localAccessUserMap: [...localAccessUserMap],
       cloudAccessUserMap: [...cloudAccessUserMap],
       addIds,
-      existingIds,
+      commonIds,
       removeIds,
+      modifyIds,
     };
   }
 }
