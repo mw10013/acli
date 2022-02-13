@@ -1,6 +1,5 @@
 import { Command, Flags } from "@oclif/core";
 import { Prisma, PrismaClient } from "@prisma/client";
-// const fetch = require("node-fetch");
 import fetch from "node-fetch";
 import { z } from "zod";
 
@@ -49,6 +48,10 @@ const HeartbeatResponseData = z.object({
     .strict(),
 });
 type HeartbeatResponseData = z.infer<typeof HeartbeatResponseData>;
+type AccessUserMap = Map<
+  number,
+  HeartbeatResponseData["accessManager"]["accessUsers"][number]
+>;
 
 const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
   select: {
@@ -59,7 +62,27 @@ const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
     },
   },
 });
-type AccessManager = Prisma.AccessUserGetPayload<typeof accessManagerSelect>;
+// type AccessManager = Prisma.AccessUserGetPayload<typeof accessManagerSelect>;
+
+const accessUserSelect = (accessManagerId: number) => {
+  return Prisma.validator<Prisma.AccessUserArgs>()({
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      activateCodeAt: true,
+      expireCodeAt: true,
+      accessPoints: {
+        select: { id: true, name: true },
+        where: { accessManager: { id: accessManagerId } },
+      },
+    },
+  });
+};
+
+type AccessUser = Prisma.AccessUserGetPayload<
+  ReturnType<typeof accessUserSelect>
+>;
 
 export default class Cmd extends Command {
   static description = "Post heartbeat to access cloud.";
@@ -128,30 +151,43 @@ export default class Cmd extends Command {
       );
     }
 
-    const accessUsers = await db.accessUser.findMany();
-    const existingIds = new Set<number>(accessUsers.map((i) => i.id));
-    const addIds = new Set<number>();
-    const modifyIds = new Set<number>();
-    const accessUserMap = new Map<
-      number,
-      HeartbeatResponseData["accessManager"]["accessUsers"][number]
-    >();
+    const localAccessUserMap: AccessUserMap = new Map();
+    for (const accessUser of await db.accessUser.findMany({
+      ...accessUserSelect(accessManager.id),
+    })) {
+      localAccessUserMap.set(accessUser.id, accessUser);
+    }
+
+    const addIds = [];
+    const modifyIds = [];
+    const cloudAccessUserMap: AccessUserMap = new Map();
     for (const accessUser of parseResult.data.accessManager.accessUsers) {
-      accessUserMap.set(accessUser.id, accessUser);
-      if (existingIds.has(accessUser.id)) {
-        modifyIds.add(accessUser.id);
+      cloudAccessUserMap.set(accessUser.id, accessUser);
+      if (localAccessUserMap.has(accessUser.id)) {
+        modifyIds.push(accessUser.id);
       } else {
-        addIds.add(accessUser.id);
+        addIds.push(accessUser.id);
       }
     }
 
+    if (
+      cloudAccessUserMap.size !==
+      parseResult.data.accessManager.accessUsers.length
+    ) {
+      throw new Error(`Duplicate cloud access user id's.`);
+    }
+
+    const modifyIdsSet = new Set(modifyIds);
+    const removeIds = [...localAccessUserMap.keys()].filter(
+      (x) => !modifyIdsSet.has(x)
+    );
+
     return {
-      pointIds: [...pointIds],
-      accessUsers: parseResult.data.accessManager.accessUsers,
-      existingIds: [...existingIds],
-      accessUserMap: [...accessUserMap],
-      addIds: [...addIds],
-      modifyIds: [...modifyIds],
+      localAccessUserMap: [...localAccessUserMap],
+      cloudAccessUserMap: [...cloudAccessUserMap],
+      addIds,
+      modifyIds,
+      removeIds,
     };
   }
 }
