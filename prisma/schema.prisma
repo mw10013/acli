@@ -11,10 +11,10 @@ datasource db {
 }
 
 model AccessManager {
-  id                  Int             @id
-  name                String          @default("")
-  accessPoints        AccessPoint[] 
-  cloudActivitySince  DateTime?
+  id                      Int             @id
+  name                    String          @default("")
+  accessPoints            AccessPoint[] 
+  cloudLastAccessEventAt  DateTime?
 }
 
 model AccessPoint {

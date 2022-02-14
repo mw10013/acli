@@ -5,6 +5,26 @@ import fetch from "node-fetch";
 import { z } from "zod";
 import * as _ from "lodash";
 
+const accessEventSelect = Prisma.validator<Prisma.AccessEventArgs>()({
+  select: {
+    id: true,
+    at: true,
+    access: true,
+    code: true,
+    accessUserId: true,
+    accessPointId: true,
+  },
+});
+type AccessEvent = Prisma.AccessEventGetPayload<typeof accessEventSelect>;
+
+type HeartbeatRequestData = {
+  accessManager: {
+    id: number;
+    cloudLastAccessEventAt: string | null; // JSON date
+    accessEvents: AccessEvent[];
+  };
+};
+
 const HeartbeatResponseData = z.object({
   accessManager: z
     .object({
@@ -14,7 +34,7 @@ const HeartbeatResponseData = z.object({
         .refine((v) => v.length === 0 || !Number.isNaN(Date.parse(v)), {
           message: "Invalid date time",
         })
-        .transform((v) => (v.length > 0 ? new Date(v) : null)),
+        .transform((v) => new Date(v)),
       accessUsers: z.array(
         z
           .object({
@@ -65,13 +85,12 @@ const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
   select: {
     id: true,
     name: true,
-    cloudActivitySince: true,
+    cloudLastAccessEventAt: true,
     accessPoints: {
       select: { id: true, name: true },
     },
   },
 });
-// type AccessManager = Prisma.AccessUserGetPayload<typeof accessManagerSelect>;
 
 const accessUserSelect = (accessManagerId: number) => {
   return Prisma.validator<Prisma.AccessUserArgs>()({
@@ -115,9 +134,27 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    const body = {
+    const db = new PrismaClient({ log: ["query"] });
+    const accessManager = await db.accessManager.findFirst({
+      ...accessManagerSelect,
+      rejectOnNotFound: true,
+    });
+    const accessEvents = accessManager.cloudLastAccessEventAt
+      ? await db.accessEvent.findMany({
+          where: {
+            at: { gt: accessManager.cloudLastAccessEventAt },
+          },
+          orderBy: { at: "desc" },
+          ...accessEventSelect,
+        })
+      : [];
+    const body: HeartbeatRequestData = {
       accessManager: {
         id: 1,
+        cloudLastAccessEventAt: accessManager.cloudLastAccessEventAt
+          ? accessManager.cloudLastAccessEventAt.toJSON()
+          : null,
+        accessEvents,
       },
     };
     const response = await fetch(`${flags.host}/api/accessmanager/heartbeat`, {
@@ -138,12 +175,6 @@ export default class Cmd extends Command {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
-    const db = new PrismaClient({ log: ["query"] });
-    const accessManager = await db.accessManager.findUnique({
-      where: { id: parseResult.data.accessManager.id },
-      ...accessManagerSelect,
-      rejectOnNotFound: true,
-    });
     const pointIds = new Set<number>(
       accessManager.accessPoints.map((i) => i.id)
     );
@@ -238,6 +269,14 @@ export default class Cmd extends Command {
       }
     }
 
+    const updatedAccessManager = await db.accessManager.update({
+      where: { id: accessManager.id },
+      data: {
+        cloudLastAccessEventAt:
+          parseResult.data.accessManager.cloudLastAccessEventAt,
+      },
+    });
+
     return {
       localAccessUserMap: [...localAccessUserMap],
       cloudAccessUserMap: [...cloudAccessUserMap],
@@ -248,6 +287,7 @@ export default class Cmd extends Command {
       deletedCount,
       cloudLastAccessEventAt:
         parseResult.data.accessManager.cloudLastAccessEventAt,
+      updatedAccessManager,
     };
   }
 }
