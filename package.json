@@ -60,6 +60,12 @@
     "topics": {
       "hello": {
         "description": "Say hello to the world and others"
+      },
+      "mock": {
+        "description": "Mock grant and deny"
+      },
+      "dump": {
+        "description": "Dump database"
       }
     }
   },

@@ -1,7 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { flags } from "@oclif/core/lib/parser";
 import { PrismaClient } from "@prisma/client";
-import { number } from "zod";
 
 export default class Cmd extends Command {
   static description = "Mock access grant";
@@ -9,20 +7,15 @@ export default class Cmd extends Command {
   static enableJsonFlag = true;
 
   static flags = {
-    point: Flags.string({
+    point: Flags.integer({
       char: "p",
       description: "point id",
       required: true,
     }),
-    user: Flags.string({
+    user: Flags.integer({
       char: "u",
       description: "user id",
       required: true,
-    }),
-    code: Flags.string({
-      char: "c",
-      description: "code",
-      default: "1357",
     }),
   };
 
@@ -35,28 +28,30 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    if (!Number.isInteger(Number(flags.user))) {
-      throw new TypeError(`User must be an integer: ${flags.user}`);
-    }
 
     const db = new PrismaClient();
-    await db.accessPoint.findUnique({
+    const accessUser = await db.accessUser.findUnique({
+      where: { id: Number(flags.user) },
+      rejectOnNotFound: true,
+    });
+
+    const accessPoint = await db.accessPoint.findUnique({
       where: { id: Number(flags.point) },
+      rejectOnNotFound: true,
     });
 
     const accessEvent = await db.accessEvent.create({
       data: {
         at: new Date(),
         access: "grant",
-        code: flags.code,
-        accessUserId: Number(flags.user),
-        accessPointId: Number(flags.point),
+        code: accessUser.code,
+        accessUserId: accessUser.id,
+        accessPointId: accessPoint.id,
       },
     });
 
     await db.$disconnect();
-    // this.log("Access Manager: ", accessManager);
     this.log("Grant Event", accessEvent);
-    return { flags, accessEvent };
+    return { accessEvent };
   }
 }
