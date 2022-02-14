@@ -31,7 +31,8 @@ const HeartbeatResponseData = z.object({
       id: z.number().int(),
       cloudLastAccessEventAt: z // JSON date
         .string()
-        .refine((v) => v.length === 0 || !Number.isNaN(Date.parse(v)), {
+        .min(1)
+        .refine((v) => !Number.isNaN(Date.parse(v)), {
           message: "Invalid date time",
         })
         .transform((v) => new Date(v)),
