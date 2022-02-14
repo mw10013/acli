@@ -32,12 +32,10 @@ model AccessPoint {
 model AccessUser {
   id                Int         @id
   name              String      @default("") 
-  code              String
+  code              String      @unique
   activateCodeAt    DateTime?
   expireCodeAt      DateTime?
   accessPoints      AccessPoint[]
-
-  // @@unique([code, userId, deletedAt])
 }
 
 model AccessEvent {
@@ -45,8 +43,7 @@ model AccessEvent {
   at                DateTime
   access            String
   code              String
-  // accessUser        AccessUser?  @relation(fields: [accessUserId], references: [id])
-  accessUserId      Int?
+  accessUserId      Int? // Not enforced reference to AccessUser which may be deleted.
   accessPoint       AccessPoint @relation(fields: [accessPointId], references: [id])
   accessPointId     Int
 }

@@ -219,7 +219,14 @@ export default class Cmd extends Command {
       (id) => !_.isEqual(cloudAccessUserMap.get(id), localAccessUserMap.get(id))
     );
 
-    // TODO: Put in transaction
+    // Delete first since codes must be unique.
+    const { count: deletedCount } = await db.accessUser.deleteMany({
+      where: {
+        id: { in: removeIds },
+      },
+    });
+
+    // TODO: Put in transaction, handle 2 users exchanging codes.
     for (const id of modifyIds) {
       const accessUser = cloudAccessUserMap.get(id);
       if (accessUser) {
@@ -239,13 +246,8 @@ export default class Cmd extends Command {
       }
     }
 
-    const { count: deletedCount } = await db.accessUser.deleteMany({
-      where: {
-        id: { in: removeIds },
-      },
-    });
-
     // TODO: Put in transaction.
+    // After delete and update since codes must be unique.
     for (const id of addIds) {
       const accessUser = cloudAccessUserMap.get(id);
       if (accessUser) {
