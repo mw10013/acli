@@ -9,6 +9,12 @@ const HeartbeatResponseData = z.object({
   accessManager: z
     .object({
       id: z.number().int(),
+      cloudLastAccessEventAt: z // JSON date
+        .string()
+        .refine((v) => v.length === 0 || !Number.isNaN(Date.parse(v)), {
+          message: "Invalid date time",
+        })
+        .transform((v) => (v.length > 0 ? new Date(v) : null)),
       accessUsers: z.array(
         z
           .object({
@@ -59,6 +65,7 @@ const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
   select: {
     id: true,
     name: true,
+    cloudActivitySince: true,
     accessPoints: {
       select: { id: true, name: true },
     },
@@ -239,6 +246,8 @@ export default class Cmd extends Command {
       removeIds,
       modifyIds,
       deletedCount,
+      cloudLastAccessEventAt:
+        parseResult.data.accessManager.cloudLastAccessEventAt,
     };
   }
 }
