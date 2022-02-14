@@ -1,3 +1,4 @@
+/* eslint-disable no-warning-comments */
 import { Command, Flags } from "@oclif/core";
 import { Prisma, PrismaClient } from "@prisma/client";
 import fetch from "node-fetch";
@@ -179,11 +180,12 @@ export default class Cmd extends Command {
       (x) => !commonIdsSet.has(x)
     );
 
-    // TODD: compare access point id's only in sets.
+    // TODO: compare access point id's only in sets.
     const modifyIds = commonIds.filter(
       (id) => !_.isEqual(cloudAccessUserMap.get(id), localAccessUserMap.get(id))
     );
 
+    // TODO: Put in transaction
     for (const id of modifyIds) {
       const accessUser = cloudAccessUserMap.get(id);
       if (accessUser) {
@@ -209,6 +211,7 @@ export default class Cmd extends Command {
       },
     });
 
+    // TODO: Put in transaction.
     for (const id of addIds) {
       const accessUser = cloudAccessUserMap.get(id);
       if (accessUser) {
