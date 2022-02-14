@@ -15,7 +15,7 @@ export default class Cmd extends Command {
     code: Flags.string({
       char: "c",
       description: "code",
-      default: "1357",
+      default: "666",
     }),
   };
 

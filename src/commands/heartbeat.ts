@@ -7,7 +7,6 @@ import * as _ from "lodash";
 
 const accessEventSelect = Prisma.validator<Prisma.AccessEventArgs>()({
   select: {
-    id: true,
     at: true,
     access: true,
     code: true,
