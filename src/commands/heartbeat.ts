@@ -179,9 +179,35 @@ export default class Cmd extends Command {
       (x) => !commonIdsSet.has(x)
     );
 
+    // TODD: compare access point id's only in sets.
     const modifyIds = commonIds.filter(
       (id) => !_.isEqual(cloudAccessUserMap.get(id), localAccessUserMap.get(id))
     );
+
+    for (const id of modifyIds) {
+      const accessUser = cloudAccessUserMap.get(id);
+      if (accessUser) {
+        // eslint-disable-next-line no-await-in-loop
+        await db.accessUser.update({
+          where: { id: accessUser.id },
+          data: {
+            name: accessUser.name,
+            code: accessUser.code,
+            activateCodeAt: accessUser.activateCodeAt,
+            expireCodeAt: accessUser.expireCodeAt,
+            accessPoints: {
+              set: accessUser.accessPoints.map((v) => ({ id: v.id })),
+            },
+          },
+        });
+      }
+    }
+
+    const { count: deletedCount } = await db.accessUser.deleteMany({
+      where: {
+        id: { in: removeIds },
+      },
+    });
 
     for (const id of addIds) {
       const accessUser = cloudAccessUserMap.get(id);
@@ -201,35 +227,6 @@ export default class Cmd extends Command {
         });
       }
     }
-    /*
-    const accessUser = cloudAccessUserMap.get(1);
-    if (accessUser) {
-      const create = await db.accessUser.create({
-        data: {
-          id: accessUser.id,
-          name: accessUser.name,
-          code: accessUser.code,
-          activateCodeAt: accessUser.activateCodeAt,
-          expireCodeAt: accessUser.expireCodeAt,
-        },
-      });
-    }
-*/
-    // await db.$transaction(addIds.map(id => {
-    //   const accessUser = cloudAccessUserMap.get(id)
-
-    //   if (accessUser) {
-    //     return db.accessUser.create({
-    //       data: {
-    //         id: accessUser.id,
-    //         name: accessUser.name,
-    //         code: accessUser.code,
-    //         activateCodeAt: accessUser.activateCodeAt,
-    //         expireCodeAt: accessUser.expireCodeAt,
-    //       },
-    //     }  });
-
-    // ))
 
     return {
       localAccessUserMap: [...localAccessUserMap],
@@ -238,6 +235,7 @@ export default class Cmd extends Command {
       commonIds,
       removeIds,
       modifyIds,
+      deletedCount,
     };
   }
 }
