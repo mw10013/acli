@@ -44,23 +44,19 @@ const HeartbeatResponseData = z.object({
             code: z.string().min(1),
             activateCodeAt: z // JSON date
               .string()
+              .min(1)
               .nullable()
-              .refine(
-                (v) => !v || v.length === 0 || !Number.isNaN(Date.parse(v)),
-                {
-                  message: "Invalid date time",
-                }
-              )
-              .transform((v) => (v && v.length > 0 ? new Date(v) : null)),
+              .refine((v) => !v || !Number.isNaN(Date.parse(v)), {
+                message: "Invalid date time",
+              })
+              .transform((v) => (v ? new Date(v) : null)),
             expireCodeAt: z // JSON date
               .string()
+              .min(1)
               .nullable()
-              .refine(
-                (v) => !v || v.length === 0 || !Number.isNaN(Date.parse(v)),
-                {
-                  message: "Invalid date time",
-                }
-              )
+              .refine((v) => !v || !Number.isNaN(Date.parse(v)), {
+                message: "Invalid date time",
+              })
               .transform((v) => (v && v.length > 0 ? new Date(v) : null)),
             accessPoints: z.array(
               z

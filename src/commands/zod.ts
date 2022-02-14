@@ -1,4 +1,4 @@
-import { Command, Flags } from "@oclif/core";
+import { Command } from "@oclif/core";
 import { z } from "zod";
 
 // Zod seems to always call refine's and only calls transform's if prior goes through
