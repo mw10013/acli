@@ -13,7 +13,8 @@ datasource db {
 model AccessManager {
   id                      Int             @id
   name                    String          @default("")
-  accessPoints            AccessPoint[] 
+  accessPoints            AccessPoint[]
+  accessUsers             AccessUser[]    // for nested writes
   cloudLastAccessEventAt  DateTime?
 }
 
@@ -36,6 +37,8 @@ model AccessUser {
   activateCodeAt    DateTime?
   expireCodeAt      DateTime?
   accessPoints      AccessPoint[]
+  accessManager     AccessManager @relation(fields: [accessManagerId], references: [id])
+  accessManagerId   Int
 }
 
 model AccessEvent {

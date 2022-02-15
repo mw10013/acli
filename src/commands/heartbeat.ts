@@ -85,24 +85,34 @@ const accessManagerSelect = Prisma.validator<Prisma.AccessManagerArgs>()({
     accessPoints: {
       select: { id: true, name: true },
     },
+    accessUsers: {
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        activateCodeAt: true,
+        expireCodeAt: true,
+        accessPoints: { select: { id: true, name: true } },
+      },
+    },
   },
 });
 
-const accessUserSelect = (accessManagerId: number) => {
-  return Prisma.validator<Prisma.AccessUserArgs>()({
-    select: {
-      id: true,
-      name: true,
-      code: true,
-      activateCodeAt: true,
-      expireCodeAt: true,
-      accessPoints: {
-        select: { id: true, name: true },
-        where: { accessManager: { id: accessManagerId } },
-      },
-    },
-  });
-};
+// const accessUserSelect = (accessManagerId: number) => {
+//   return Prisma.validator<Prisma.AccessUserArgs>()({
+//     select: {
+//       id: true,
+//       name: true,
+//       code: true,
+//       activateCodeAt: true,
+//       expireCodeAt: true,
+//       accessPoints: {
+//         select: { id: true, name: true },
+//         where: { accessManager: { id: accessManagerId } },
+//       },
+//     },
+//   });
+// };
 
 // type AccessUser = Prisma.AccessUserGetPayload<
 //   ReturnType<typeof accessUserSelect>
@@ -146,7 +156,7 @@ export default class Cmd extends Command {
       : [];
     const body: HeartbeatRequestData = {
       accessManager: {
-        id: 1,
+        id: accessManager.id,
         cloudLastAccessEventAt: accessManager.cloudLastAccessEventAt
           ? accessManager.cloudLastAccessEventAt.toJSON()
           : null,
@@ -183,14 +193,12 @@ export default class Cmd extends Command {
       );
     }
 
-    const localAccessUserMap: AccessUserMap = new Map();
-    for (const accessUser of await db.accessUser.findMany({
-      ...accessUserSelect(accessManager.id),
-    })) {
-      localAccessUserMap.set(accessUser.id, accessUser);
-    }
+    const localAccessUserMap: AccessUserMap = new Map(
+      accessManager.accessUsers.map((v) => [v.id, v])
+    );
 
-    const addIds = [];
+    const addAccessUsers: HeartbeatResponseData["accessManager"]["accessUsers"][number][] =
+      [];
     const commonIds = [];
     const cloudAccessUserMap: AccessUserMap = new Map();
     for (const accessUser of parseResult.data.accessManager.accessUsers) {
@@ -198,7 +206,7 @@ export default class Cmd extends Command {
       if (localAccessUserMap.has(accessUser.id)) {
         commonIds.push(accessUser.id);
       } else {
-        addIds.push(accessUser.id);
+        addAccessUsers.push(accessUser);
       }
     }
 
@@ -220,13 +228,14 @@ export default class Cmd extends Command {
     );
 
     // Delete first since codes must be unique.
-    const { count: deletedCount } = await db.accessUser.deleteMany({
-      where: {
-        id: { in: removeIds },
-      },
-    });
+    // const { count: deletedCount } = await db.accessUser.deleteMany({
+    //   where: {
+    //     id: { in: removeIds },
+    //   },
+    // });
 
     // TODO: Put in transaction, handle 2 users exchanging codes.
+    /*
     for (const id of modifyIds) {
       const accessUser = cloudAccessUserMap.get(id);
       if (accessUser) {
@@ -245,10 +254,11 @@ export default class Cmd extends Command {
         });
       }
     }
-
+*/
     // TODO: Put in transaction.
     // After delete and update since codes must be unique.
-    for (const id of addIds) {
+    /*
+    for (const id of addAccessUsers) {
       const accessUser = cloudAccessUserMap.get(id);
       if (accessUser) {
         // eslint-disable-next-line no-await-in-loop
@@ -262,27 +272,39 @@ export default class Cmd extends Command {
             accessPoints: {
               connect: accessUser.accessPoints.map((v) => ({ id: v.id })),
             },
+            accessManagerId: accessManager.id,
           },
         });
       }
     }
-
+*/
     const updatedAccessManager = await db.accessManager.update({
       where: { id: accessManager.id },
       data: {
         cloudLastAccessEventAt:
           parseResult.data.accessManager.cloudLastAccessEventAt,
+        accessUsers: {
+          deleteMany: {
+            id: { in: removeIds },
+          },
+          create: addAccessUsers.map((accessUser) => ({
+            ...accessUser,
+            accessPoints: {
+              connect: accessUser.accessPoints.map((v) => ({ id: v.id })),
+            },
+          })),
+        },
       },
     });
 
     return {
       localAccessUserMap: [...localAccessUserMap],
       cloudAccessUserMap: [...cloudAccessUserMap],
-      addIds,
+      addAccessUsers,
       commonIds,
       removeIds,
       modifyIds,
-      deletedCount,
+      // deletedCount,
       cloudLastAccessEventAt:
         parseResult.data.accessManager.cloudLastAccessEventAt,
       updatedAccessManager,

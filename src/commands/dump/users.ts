@@ -1,4 +1,4 @@
-import { Command } from "@oclif/core";
+import { Command, Flags } from "@oclif/core";
 import { PrismaClient } from "@prisma/client";
 
 export default class Cmd extends Command {
@@ -6,7 +6,23 @@ export default class Cmd extends Command {
   static examples = ["<%= config.bin %> <%= command.id %>"];
   static enableJsonFlag = true;
 
-  static flags = {};
+  static flags = {
+    take: Flags.integer({
+      char: "t",
+      description: "Number of events to take",
+      default: 10,
+    }),
+    skip: Flags.integer({
+      char: "s",
+      description: "Number of events to skip",
+      default: 0,
+    }),
+    swap: Flags.boolean({
+      char: "w",
+      description: "Swap codes of first two access users.",
+      default: false,
+    }),
+  };
 
   static args = [];
 
@@ -16,13 +32,46 @@ export default class Cmd extends Command {
   }
 
   async run(): Promise<any> {
+    const { flags } = await this.parse(Cmd);
     const db = new PrismaClient();
+
+    if (flags.swap) {
+      const [accessUser1, accessUser2] = await db.accessUser.findMany({
+        take: 2,
+      });
+      if (accessUser1 && accessUser2) {
+        await db.accessManager.update({
+          where: { id: accessUser1.accessManagerId },
+          data: {
+            accessUsers: {
+              update: [
+                {
+                  where: { id: accessUser1.id },
+                  data: { code: `${accessUser1.code}-` },
+                },
+                {
+                  where: { id: accessUser2.id },
+                  data: { code: accessUser1.code },
+                },
+                {
+                  where: { id: accessUser1.id },
+                  data: { code: accessUser2.code },
+                },
+              ],
+            },
+          },
+        });
+      }
+    }
+
     const accessUsers = await db.accessUser.findMany({
       include: {
         accessPoints: {
           select: { id: true, name: true },
         },
       },
+      take: flags.take,
+      skip: flags.skip,
     });
     await db.$disconnect();
     this.log("Access Users: ", accessUsers);
