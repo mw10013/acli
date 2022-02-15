@@ -211,8 +211,22 @@ export default class Cmd extends Command {
       const localAccessUser = localAccessUserMap.get(cloudAccesUser.id);
       if (localAccessUser) {
         commondIdsSet.add(cloudAccesUser.id);
-        // TODO: compare access points in sets
-        if (!_.isEqual(cloudAccesUser, localAccessUser)) {
+        if (
+          !_.isEqual(
+            {
+              ...cloudAccesUser,
+              accessPoints: new Set(
+                cloudAccesUser.accessPoints.map((v) => v.id)
+              ),
+            },
+            {
+              ...localAccessUser,
+              accessPoints: new Set(
+                localAccessUser.accessPoints.map((v) => v.id)
+              ),
+            }
+          )
+        ) {
           updateAccessUsers.push(cloudAccesUser);
         }
       } else {
