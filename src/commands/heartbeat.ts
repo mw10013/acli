@@ -148,7 +148,10 @@ export default class Cmd extends Command {
     const accessEvents = accessManager.cloudLastAccessEventAt
       ? await db.accessEvent.findMany({
           where: {
-            at: { gt: accessManager.cloudLastAccessEventAt },
+            AND: [
+              { at: { gt: accessManager.cloudLastAccessEventAt } },
+              { at: { lt: new Date(Date.now() - 5 * 1000) } },
+            ],
           },
           orderBy: { at: "desc" },
           ...accessEventSelect,
@@ -197,16 +200,23 @@ export default class Cmd extends Command {
       accessManager.accessUsers.map((v) => [v.id, v])
     );
 
-    const addAccessUsers: HeartbeatResponseData["accessManager"]["accessUsers"][number][] =
-      [];
-    const commonIds = [];
     const cloudAccessUserMap: AccessUserMap = new Map();
-    for (const accessUser of parseResult.data.accessManager.accessUsers) {
-      cloudAccessUserMap.set(accessUser.id, accessUser);
-      if (localAccessUserMap.has(accessUser.id)) {
-        commonIds.push(accessUser.id);
+    const createAccessUsers: HeartbeatResponseData["accessManager"]["accessUsers"][number][] =
+      [];
+    const commondIdsSet = new Set();
+    const updateAccessUsers: HeartbeatResponseData["accessManager"]["accessUsers"][number][] =
+      [];
+    for (const cloudAccesUser of parseResult.data.accessManager.accessUsers) {
+      cloudAccessUserMap.set(cloudAccesUser.id, cloudAccesUser);
+      const localAccessUser = localAccessUserMap.get(cloudAccesUser.id);
+      if (localAccessUser) {
+        commondIdsSet.add(cloudAccesUser.id);
+        // TODO: compare access points in sets
+        if (!_.isEqual(cloudAccesUser, localAccessUser)) {
+          updateAccessUsers.push(cloudAccesUser);
+        }
       } else {
-        addAccessUsers.push(accessUser);
+        createAccessUsers.push(cloudAccesUser);
       }
     }
 
@@ -217,97 +227,58 @@ export default class Cmd extends Command {
       throw new Error(`Duplicate cloud access user id's.`);
     }
 
-    const commonIdsSet = new Set(commonIds);
-    const removeIds = [...localAccessUserMap.keys()].filter(
-      (x) => !commonIdsSet.has(x)
+    const deleteIds = [...localAccessUserMap.keys()].filter(
+      (x) => !commondIdsSet.has(x)
     );
 
-    // TODO: compare access point id's only in sets.
-    const modifyIds = commonIds.filter(
-      (id) => !_.isEqual(cloudAccessUserMap.get(id), localAccessUserMap.get(id))
-    );
-
-    // Delete first since codes must be unique.
-    // const { count: deletedCount } = await db.accessUser.deleteMany({
-    //   where: {
-    //     id: { in: removeIds },
-    //   },
-    // });
-
-    // TODO: Put in transaction, handle 2 users exchanging codes.
-    /*
-    for (const id of modifyIds) {
-      const accessUser = cloudAccessUserMap.get(id);
-      if (accessUser) {
-        // eslint-disable-next-line no-await-in-loop
-        await db.accessUser.update({
-          where: { id: accessUser.id },
-          data: {
-            name: accessUser.name,
-            code: accessUser.code,
-            activateCodeAt: accessUser.activateCodeAt,
-            expireCodeAt: accessUser.expireCodeAt,
-            accessPoints: {
-              set: accessUser.accessPoints.map((v) => ({ id: v.id })),
-            },
-          },
-        });
-      }
-    }
-*/
-    // TODO: Put in transaction.
-    // After delete and update since codes must be unique.
-    /*
-    for (const id of addAccessUsers) {
-      const accessUser = cloudAccessUserMap.get(id);
-      if (accessUser) {
-        // eslint-disable-next-line no-await-in-loop
-        await db.accessUser.create({
-          data: {
-            id: accessUser.id,
-            name: accessUser.name,
-            code: accessUser.code,
-            activateCodeAt: accessUser.activateCodeAt,
-            expireCodeAt: accessUser.expireCodeAt,
-            accessPoints: {
-              connect: accessUser.accessPoints.map((v) => ({ id: v.id })),
-            },
-            accessManagerId: accessManager.id,
-          },
-        });
-      }
-    }
-*/
-    const updatedAccessManager = await db.accessManager.update({
-      where: { id: accessManager.id },
-      data: {
-        cloudLastAccessEventAt:
-          parseResult.data.accessManager.cloudLastAccessEventAt,
-        accessUsers: {
-          deleteMany: {
-            id: { in: removeIds },
-          },
-          create: addAccessUsers.map((accessUser) => ({
-            ...accessUser,
-            accessPoints: {
-              connect: accessUser.accessPoints.map((v) => ({ id: v.id })),
-            },
-          })),
+    // Codes must be unique: delete, code, modify, add.
+    await db.$transaction([
+      db.accessUser.deleteMany({
+        where: {
+          id: { in: deleteIds },
         },
-      },
-    });
+      }),
+      db.accessManager.update({
+        where: { id: accessManager.id },
+        data: {
+          accessUsers: {
+            update: updateAccessUsers.map(({ id, ...accessUser }) => ({
+              where: { id },
+              data: {
+                ...accessUser,
+                accessPoints: {
+                  set: accessUser.accessPoints.map((v) => ({ id: v.id })),
+                },
+              },
+            })),
+          },
+        },
+      }),
+      db.accessManager.update({
+        where: { id: accessManager.id },
+        data: {
+          cloudLastAccessEventAt:
+            parseResult.data.accessManager.cloudLastAccessEventAt,
+          accessUsers: {
+            create: createAccessUsers.map((accessUser) => ({
+              ...accessUser,
+              accessPoints: {
+                connect: accessUser.accessPoints.map((v) => ({ id: v.id })),
+              },
+            })),
+          },
+        },
+      }),
+    ]);
 
     return {
       localAccessUserMap: [...localAccessUserMap],
       cloudAccessUserMap: [...cloudAccessUserMap],
-      addAccessUsers,
-      commonIds,
-      removeIds,
-      modifyIds,
-      // deletedCount,
-      cloudLastAccessEventAt:
-        parseResult.data.accessManager.cloudLastAccessEventAt,
-      updatedAccessManager,
+      accessEventCount: accessEvents.length,
+      createIds: createAccessUsers.map((v) => v.id),
+      deleteIds,
+      commonIds: [...commondIdsSet],
+      updateIds: updateAccessUsers.map((v) => v.id),
     };
   }
 }
