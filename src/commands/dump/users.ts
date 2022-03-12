@@ -33,7 +33,6 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    // const db = new PrismaClient();
     const db = new PrismaClient({
       log: [
         {
@@ -49,7 +48,6 @@ export default class Cmd extends Command {
     db.$on("query", (e) => {
       console.log("Query: " + e.query);
       console.log("Params: " + e.params);
-      console.log("Duration: " + e.duration + "ms");
     });
 
     if (flags.swap) {

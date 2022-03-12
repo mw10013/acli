@@ -2,6 +2,8 @@
 
 Access CLI
 
+- bin/dev --help
+
 ## Setup
 
 - node >= 16
