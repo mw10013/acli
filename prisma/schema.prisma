@@ -10,7 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model AccessManager {
+model AccessHub {
   id                      Int             @id
   name                    String          @default("")
   accessPoints            AccessPoint[]
@@ -22,12 +22,12 @@ model AccessPoint {
   id                Int           @id
   name              String        @default("")
   accessUsers       AccessUser[]
-  accessManager     AccessManager @relation(fields: [accessManagerId], references: [id])
-  accessManagerId   Int 
+  accessHub     AccessHub @relation(fields: [accessHubId], references: [id])
+  accessHubId   Int 
   position          Int
   accessEvents      AccessEvent[]
 
-  @@unique([accessManagerId, position])    
+  @@unique([accessHubId, position])    
 }
 
 model AccessUser {
@@ -37,8 +37,8 @@ model AccessUser {
   activateCodeAt    DateTime?
   expireCodeAt      DateTime?
   accessPoints      AccessPoint[]
-  accessManager     AccessManager @relation(fields: [accessManagerId], references: [id])
-  accessManagerId   Int
+  accessHub     AccessHub @relation(fields: [accessHubId], references: [id])
+  accessHubId   Int
 }
 
 model AccessEvent {

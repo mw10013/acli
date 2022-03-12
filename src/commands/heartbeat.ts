@@ -17,7 +17,7 @@ const accessEventSelect = Prisma.validator<Prisma.AccessEventArgs>()({
 type AccessEvent = Prisma.AccessEventGetPayload<typeof accessEventSelect>;
 
 type HeartbeatRequestData = {
-  accessManager: {
+  accessHub: {
     id: number;
     cloudLastAccessEventAt: string | null; // JSON date
     accessEvents: AccessEvent[];
@@ -25,7 +25,7 @@ type HeartbeatRequestData = {
 };
 
 const HeartbeatResponseData = z.object({
-  accessManager: z
+  accessHub: z
     .object({
       id: z.number().int(),
       cloudLastAccessEventAt: z // JSON date
@@ -72,7 +72,7 @@ const HeartbeatResponseData = z.object({
     .strict(),
 });
 type HeartbeatResponseData = z.infer<typeof HeartbeatResponseData>;
-type AccessUser = HeartbeatResponseData["accessManager"]["accessUsers"][number];
+type AccessUser = HeartbeatResponseData["accessHub"]["accessUsers"][number];
 type AccessUserMap = Map<number, AccessUser>;
 
 export default class Cmd extends Command {
@@ -97,8 +97,33 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    const db = new PrismaClient({ log: ["query"] });
-    const accessManager = await db.accessManager.findFirst({
+    const db = new PrismaClient({
+      log: [
+        {
+          emit: "event",
+          level: "query",
+        },
+        {
+          emit: "stdout",
+          level: "error",
+        },
+        {
+          emit: "stdout",
+          level: "info",
+        },
+        {
+          emit: "stdout",
+          level: "warn",
+        },
+      ],
+    });
+    db.$on("query", (e) => {
+      console.log("Query: " + e.query);
+      console.log("Params: " + e.params);
+      // console.log("Duration: " + e.duration + "ms");
+    });
+
+    const accessHub = await db.accessHub.findFirst({
       select: {
         id: true,
         name: true,
@@ -119,11 +144,11 @@ export default class Cmd extends Command {
       },
       rejectOnNotFound: true,
     });
-    const accessEvents = accessManager.cloudLastAccessEventAt
+    const accessEvents = accessHub.cloudLastAccessEventAt
       ? await db.accessEvent.findMany({
           where: {
             AND: [
-              { at: { gt: accessManager.cloudLastAccessEventAt } },
+              { at: { gt: accessHub.cloudLastAccessEventAt } },
               { at: { lt: new Date(Date.now() - 5 * 1000) } }, // Leave margin before now to prevent race condition.
             ],
           },
@@ -132,15 +157,15 @@ export default class Cmd extends Command {
         })
       : [];
     const body: HeartbeatRequestData = {
-      accessManager: {
-        id: accessManager.id,
-        cloudLastAccessEventAt: accessManager.cloudLastAccessEventAt
-          ? accessManager.cloudLastAccessEventAt.toJSON()
+      accessHub: {
+        id: accessHub.id,
+        cloudLastAccessEventAt: accessHub.cloudLastAccessEventAt
+          ? accessHub.cloudLastAccessEventAt.toJSON()
           : null,
         accessEvents,
       },
     };
-    const response = await fetch(`${flags.host}/api/accessmanager/heartbeat`, {
+    const response = await fetch(`${flags.host}/api/accesshub/heartbeat`, {
       method: "post",
       body: JSON.stringify(body),
       headers: { "Content-Type": "application/json" },
@@ -158,10 +183,8 @@ export default class Cmd extends Command {
       throw new Error(`Malformed response: ${parseResult.error.toString()}`);
     }
 
-    const pointIds = new Set<number>(
-      accessManager.accessPoints.map((i) => i.id)
-    );
-    const invalidPointIds = parseResult.data.accessManager.accessUsers.flatMap(
+    const pointIds = new Set<number>(accessHub.accessPoints.map((i) => i.id));
+    const invalidPointIds = parseResult.data.accessHub.accessUsers.flatMap(
       (i) => i.accessPoints.map((c) => c.id).filter((i) => !pointIds.has(i))
     );
     if (invalidPointIds.length > 0) {
@@ -171,7 +194,7 @@ export default class Cmd extends Command {
     }
 
     const localAccessUserMap: AccessUserMap = new Map(
-      accessManager.accessUsers.map((v) => [v.id, v])
+      accessHub.accessUsers.map((v) => [v.id, v])
     );
 
     const cloudAccessUserMap: AccessUserMap = new Map();
@@ -179,7 +202,7 @@ export default class Cmd extends Command {
     const updateAccessUsers: AccessUser[] = [];
     const commondIdsSet = new Set();
     const changedCodes = new Set();
-    for (const cloudAccessUser of parseResult.data.accessManager.accessUsers) {
+    for (const cloudAccessUser of parseResult.data.accessHub.accessUsers) {
       cloudAccessUserMap.set(cloudAccessUser.id, cloudAccessUser);
       const localAccessUser = localAccessUserMap.get(cloudAccessUser.id);
       if (localAccessUser) {
@@ -211,8 +234,7 @@ export default class Cmd extends Command {
     }
 
     if (
-      cloudAccessUserMap.size !==
-      parseResult.data.accessManager.accessUsers.length
+      cloudAccessUserMap.size !== parseResult.data.accessHub.accessUsers.length
     ) {
       throw new Error(`Duplicate cloud access user id's.`);
     }
@@ -240,8 +262,8 @@ export default class Cmd extends Command {
           }),
       recycledCodeLocalAccessUsers.length === 0
         ? null
-        : db.accessManager.update({
-            where: { id: accessManager.id },
+        : db.accessHub.update({
+            where: { id: accessHub.id },
             data: {
               accessUsers: {
                 update: recycledCodeLocalAccessUsers.map(({ id, code }) => ({
@@ -255,8 +277,8 @@ export default class Cmd extends Command {
           }),
       updateAccessUsers.length === 0
         ? null
-        : db.accessManager.update({
-            where: { id: accessManager.id },
+        : db.accessHub.update({
+            where: { id: accessHub.id },
             data: {
               accessUsers: {
                 update: updateAccessUsers.map(({ id, ...accessUser }) => ({
@@ -273,8 +295,8 @@ export default class Cmd extends Command {
           }),
       createAccessUsers.length === 0
         ? null
-        : db.accessManager.update({
-            where: { id: accessManager.id },
+        : db.accessHub.update({
+            where: { id: accessHub.id },
             data: {
               accessUsers: {
                 create: createAccessUsers.map((accessUser) => ({
@@ -286,15 +308,15 @@ export default class Cmd extends Command {
               },
             },
           }),
-      accessManager.cloudLastAccessEventAt &&
-      accessManager.cloudLastAccessEventAt.getTime() ===
-        parseResult.data.accessManager.cloudLastAccessEventAt.getTime()
+      accessHub.cloudLastAccessEventAt &&
+      accessHub.cloudLastAccessEventAt.getTime() ===
+        parseResult.data.accessHub.cloudLastAccessEventAt.getTime()
         ? null
-        : db.accessManager.update({
-            where: { id: accessManager.id },
+        : db.accessHub.update({
+            where: { id: accessHub.id },
             data: {
               cloudLastAccessEventAt:
-                parseResult.data.accessManager.cloudLastAccessEventAt,
+                parseResult.data.accessHub.cloudLastAccessEventAt,
             },
           }),
     ].filter((x): x is TransactionParameter => x !== null);

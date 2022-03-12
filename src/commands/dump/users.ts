@@ -33,15 +33,32 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    const db = new PrismaClient();
+    // const db = new PrismaClient();
+    const db = new PrismaClient({
+      log: [
+        {
+          emit: "event",
+          level: "query",
+        },
+        "info",
+        "warn",
+        "error",
+      ],
+    });
+
+    db.$on("query", (e) => {
+      console.log("Query: " + e.query);
+      console.log("Params: " + e.params);
+      console.log("Duration: " + e.duration + "ms");
+    });
 
     if (flags.swap) {
       const [accessUser1, accessUser2] = await db.accessUser.findMany({
         take: 2,
       });
       if (accessUser1 && accessUser2) {
-        await db.accessManager.update({
-          where: { id: accessUser1.accessManagerId },
+        await db.accessHub.update({
+          where: { id: accessUser1.accessHubId },
           data: {
             accessUsers: {
               update: [

@@ -2,7 +2,7 @@ import { Command } from "@oclif/core";
 import { PrismaClient } from "@prisma/client";
 
 export default class Cmd extends Command {
-  static description = "Dump access manager";
+  static description = "Dump access hub";
   static examples = ["<%= config.bin %> <%= command.id %>"];
   static enableJsonFlag = true;
 
@@ -17,7 +17,7 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const db = new PrismaClient();
-    const accessManager = await db.accessManager.findFirst({
+    const accessHub = await db.accessHub.findFirst({
       include: {
         accessPoints: {
           select: { id: true, name: true, position: true },
@@ -26,7 +26,7 @@ export default class Cmd extends Command {
       },
     });
     await db.$disconnect();
-    this.log("Access Manager: ", accessManager);
-    return { accessManager };
+    this.log("Access Hub: ", accessHub);
+    return { accessHub };
   }
 }

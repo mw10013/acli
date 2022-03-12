@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 
 async function seed() {
-  await db.accessManager.create({
+  await db.accessHub.create({
     data: {
       id: 1,
       name: "Brooklyn BnB",
