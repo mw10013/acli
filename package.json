@@ -22,7 +22,7 @@
     "@oclif/plugin-plugins": "^2.0.1",
     "@prisma/client": "^3.10.0",
     "lodash": "^4.17.21",
-    "node-fetch": "^2.6.6",
+    "node-fetch": "^2.6.7",
     "zod": "^3.11.6"
   },
   "devDependencies": {
