@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { PrismaClient } from "@prisma/client";
+import { prismaClient } from "../../db";
 
 export default class Cmd extends Command {
   static description = "Mock access deny";
@@ -29,7 +29,7 @@ export default class Cmd extends Command {
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
 
-    const db = new PrismaClient();
+    const db = prismaClient();
     const accessPoint = await db.accessPoint.findUnique({
       where: { id: Number(flags.point) },
       rejectOnNotFound: true,

@@ -1,9 +1,10 @@
 /* eslint-disable no-warning-comments */
 import { Command, Flags } from "@oclif/core";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import fetch from "node-fetch";
 import { z } from "zod";
 import * as _ from "lodash";
+import { prismaClient } from "../db";
 
 const accessEventSelect = Prisma.validator<Prisma.AccessEventArgs>()({
   select: {
@@ -97,31 +98,7 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    const db = new PrismaClient({
-      log: [
-        {
-          emit: "event",
-          level: "query",
-        },
-        {
-          emit: "stdout",
-          level: "error",
-        },
-        {
-          emit: "stdout",
-          level: "info",
-        },
-        {
-          emit: "stdout",
-          level: "warn",
-        },
-      ],
-    });
-    db.$on("query", (e) => {
-      console.log("Query: " + e.query);
-      console.log("Params: " + e.params);
-      // console.log("Duration: " + e.duration + "ms");
-    });
+    const db = prismaClient();
 
     const accessHub = await db.accessHub.findFirst({
       select: {

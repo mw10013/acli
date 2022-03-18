@@ -1,5 +1,5 @@
 import { Command } from "@oclif/core";
-import { PrismaClient } from "@prisma/client";
+import { prismaClient } from "../../db";
 
 export default class Cmd extends Command {
   static description = "Dump access hub";
@@ -16,7 +16,7 @@ export default class Cmd extends Command {
   }
 
   async run(): Promise<any> {
-    const db = new PrismaClient();
+    const db = prismaClient();
     const accessHub = await db.accessHub.findFirst({
       include: {
         accessPoints: {

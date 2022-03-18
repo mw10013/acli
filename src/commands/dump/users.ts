@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { PrismaClient } from "@prisma/client";
+import { prismaClient } from "../../db";
 
 export default class Cmd extends Command {
   static description = "Dump users";
@@ -33,23 +33,7 @@ export default class Cmd extends Command {
 
   async run(): Promise<any> {
     const { flags } = await this.parse(Cmd);
-    const db = new PrismaClient({
-      log: [
-        {
-          emit: "event",
-          level: "query",
-        },
-        "info",
-        "warn",
-        "error",
-      ],
-    });
-
-    db.$on("query", (e) => {
-      console.log("Query: " + e.query);
-      console.log("Params: " + e.params);
-    });
-
+    const db = prismaClient();
     if (flags.swap) {
       const [accessUser1, accessUser2] = await db.accessUser.findMany({
         take: 2,
