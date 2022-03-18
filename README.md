@@ -3,6 +3,8 @@
 Access CLI
 
 - bin/dev --help
+- bin/dev dump users -t2 --json
+- bin/dev mock -u1 -p1
 
 ## Setup
 
